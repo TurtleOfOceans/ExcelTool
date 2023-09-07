@@ -1,7 +1,5 @@
-import sys
 import os
 import pandas as pd
-import openpyxl as xl
 from tqdm import tqdm
 
 
@@ -13,7 +11,6 @@ def readExcel(input_dir):
     return:
         excel_data: excel data
     """
-    work_book = xl.load_workbook(input_dir)
     excel_data = pd.read_excel(input_dir)
     excel_data.columns.values
     return excel_data
@@ -72,11 +69,12 @@ def splitTableData(excel_data, filter_data, filter_title, output_dir):
             row_data = excel_data.iloc[i, :]
             if (row_data[filter_title] == filter):
                 tmp_table.append(row_data)
-        
+
         data_frame = pd.DataFrame(tmp_table)
         createExcelFile(output_dir, filter, data_frame)
         file += 1
         progresBar.update()
+
 
 def inputSplitParam():
     """
@@ -85,8 +83,8 @@ def inputSplitParam():
     print("==========================")
     input_dir = input("Input (excel file): ")
     output_dir = input("Output (specify folder): ")
-    active_sheet = input("Specify sheet active [0, 1, ...] (default is 0 (first sheet)): ")
-    filter = input("Specify filter [0, 1, ...] (default is 0 (first column)): ")
+    active_sheet = input("Specify sheet active [0, 1, ...]: ")
+    filter = input("Specify filter [0, 1, ...]: ")
     print("==========================")
     param = {
         'inputDir': input_dir,
@@ -146,6 +144,7 @@ def run(mode):
         runSplitMode()
     else:
         print("mode dont exis")
+
 
 if __name__ == "__main__":
     try:
