@@ -104,6 +104,25 @@ def splitTableDataToMultiFile(
         progresBar.update()
 
 
+def createColumnData(total_row, data):
+    """
+    split table data
+    Args:
+        total_row: total row
+        data: column data
+    return:
+        data_array: column data
+    """
+    data_array = []
+    total_data = int(len(data))
+    for i in range(0, total_row):
+        if i == 0:
+            data_array.append(total_data)
+        else:
+            data_array.append(None)
+    return data_array
+
+
 def splitTableDataToMultiSheet(
         excel_data,
         filter_data,
@@ -118,6 +137,8 @@ def splitTableDataToMultiSheet(
         filter_title: specify column filter
         output_dir: specify directory out put
     """
+    MDVCNT = 2
+    SUMDVCNT = "SUM ĐVCNT"
     rows = len(excel_data.axes[0])
     total = len(filter_data)
     file_name = os.path.join(output_dir, f'{sheet}.xlsx')
@@ -125,21 +146,34 @@ def splitTableDataToMultiSheet(
     progresBar = tqdm(range(total), desc="Create Fille...")
     file = 0
     excel_data.to_excel(writer, "Total", index=False)
+    all_dvcnt_array = []
+    total_dvcnt = 0
     for filter in filter_data:
         tmp_table = []
+        dvcnt_array = []
         for i in range(0, rows):
             row_data = excel_data.iloc[i, 1:]
             if (row_data[filter_title] == filter):
                 tmp_table.append(row_data)
+                if row_data.iloc[MDVCNT] not in all_dvcnt_array:
+                    all_dvcnt_array.append(row_data.iloc[MDVCNT])
+                if row_data.iloc[MDVCNT] not in dvcnt_array:
+                    dvcnt_array.append(row_data.iloc[MDVCNT])
 
         data_frame = pd.DataFrame(tmp_table)
+        data_frame[SUMDVCNT] = createColumnData(len(tmp_table), dvcnt_array)
         index = pd.Index(range(1, len(data_frame)+1))
+        total_dvcnt += len(dvcnt_array)
         data_frame.index = index
         data_frame.to_excel(writer, filter, index_label="STT")
         file += 1
         progresBar.update()
 
     writer.close()
+    if total_dvcnt == len(all_dvcnt_array):
+        print("CHECK TOTAL DVCNT: OK")
+    else:
+        print("CHECK TOTAL DVCNT: NOT OK")
 
 
 def inputSplitParam():
@@ -242,7 +276,7 @@ def createFileWithOpenpyxl(rows_data, output_dir):
             sheet.cell(i + 1, j + 1).value = row_data[j].value
             progresBar.update()
 
-    file_name = os.path.join(output_dir, f'Test.xlsx')
+    file_name = os.path.join(output_dir, "Test.xlsx")
     wb.save(file_name)
 
 
@@ -261,7 +295,7 @@ def isRowNeed(row, min_clolumns, max_columns, row_number):
         value = cell.value
         bg_color = cell.fill.bgColor.index
         fg_color = cell.fill.fgColor.index
-        if value == None:
+        if value is None:
             continue
         if bg_color == BG_COLOR and fg_color == FG_COLOR:
             continue
@@ -272,7 +306,7 @@ def isRowNeed(row, min_clolumns, max_columns, row_number):
     if isRow:
         for i in range(min_clolumns, max_columns):
             cell = row[i]
-            if cell.value != None:
+            if cell.value is not None:
                 bg_color = cell.fill.bgColor.index
                 fg_color = cell.fill.fgColor.index
                 if bg_color != BG_COLOR or fg_color != FG_COLOR:
@@ -295,8 +329,7 @@ def createTableDataWithColorFilter(input_dir, sheet, output_dir):
     for i in range(2, work_sheet.max_row):
         row = work_sheet[i]
         isRow = isRowNeed(row, 0, 13, i)
-        if isRow == True:
-            # print(f'row[{i}] = {isRow}')
+        if isRow is True:
             total += 1
             rows_need.append(row)
     rows_length = len(rows_need)
