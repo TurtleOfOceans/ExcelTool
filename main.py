@@ -14,9 +14,23 @@ def readExcelWithPandas(input_dir, sheet=0):
     return:
         excel_data: excel data
     """
-    excel_data = pd.read_excel(input_dir, sheet)
-    excel_data.columns.values
+    HEADER_LINE = 3
+    excel_data = pd.read_excel(input_dir, sheet, header=HEADER_LINE)
     return excel_data
+
+
+def getDetailSheet(input_dir, sheet=0):
+    """
+    read excel file with pandas lib
+    Args:
+        input_dir: excel director
+        sheet: specify sheet to read data
+    return:
+        detail_data: excel data
+    """
+    excel_data_total = pd.read_excel(input_dir, sheet, header=None)
+    detail_data = excel_data_total.iloc[:3]
+    return detail_data
 
 
 def readExcelWithOpenpyxl(input_dir, sheet=0):
@@ -125,6 +139,7 @@ def createColumnData(total_row, data):
 
 def splitTableDataToMultiSheet(
         excel_data,
+        detail_data,
         filter_data,
         filter_title,
         output_dir,
@@ -133,19 +148,22 @@ def splitTableDataToMultiSheet(
     split table data
     Args:
         excel_data: excel_data
+        detail_data: detail_data
         filter_data: filter column
         filter_title: specify column filter
         output_dir: specify directory out put
     """
     MDVCNT = 2
     SUMDVCNT = "SUM ĐVCNT"
+    START_ROW = 3
     rows = len(excel_data.axes[0])
     total = len(filter_data)
     file_name = os.path.join(output_dir, f'{sheet}.xlsx')
     writer = pd.ExcelWriter(file_name)
     progresBar = tqdm(range(total), desc="Create Fille...")
     file = 0
-    excel_data.to_excel(writer, "Total", index=False)
+    detail_data.to_excel(writer, "Total", index=False, header=None)
+    excel_data.to_excel(writer, "Total", index=False, startrow=START_ROW)
     all_dvcnt_array = []
     total_dvcnt = 0
     for filter in filter_data:
@@ -165,7 +183,13 @@ def splitTableDataToMultiSheet(
         index = pd.Index(range(1, len(data_frame)+1))
         total_dvcnt += len(dvcnt_array)
         data_frame.index = index
-        data_frame.to_excel(writer, filter, index_label="STT")
+        detail_data.to_excel(writer, filter, index=False, header=None)
+        data_frame.to_excel(
+            writer,
+            filter,
+            index_label="STT",
+            startrow=START_ROW)
+
         file += 1
         progresBar.update()
 
@@ -227,6 +251,7 @@ def splitDataWithMode(input_dir, output_dir, filter, sheet, mode):
         mode: specify mode by user
     """
     excel_data = readExcelWithPandas(input_dir, sheet)
+    detail_data = getDetailSheet(input_dir, sheet)
     header = getListHeader(excel_data)
     filter_data = getListDataColumn(excel_data, header[filter])
     if (mode == 0):
@@ -238,6 +263,7 @@ def splitDataWithMode(input_dir, output_dir, filter, sheet, mode):
     elif (mode == 1):
         splitTableDataToMultiSheet(
             excel_data,
+            detail_data,
             filter_data,
             header[filter],
             output_dir,
