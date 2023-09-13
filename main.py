@@ -14,9 +14,23 @@ def readExcelWithPandas(input_dir, sheet=0):
     return:
         excel_data: excel data
     """
-    excel_data = pd.read_excel(input_dir, sheet)
-    excel_data.columns.values
+    HEADER_LINE = 3
+    excel_data = pd.read_excel(input_dir, sheet, header=HEADER_LINE)
     return excel_data
+
+
+def getDetailSheet(input_dir, sheet=0):
+    """
+    read excel file with pandas lib
+    Args:
+        input_dir: excel director
+        sheet: specify sheet to read data
+    return:
+        detail_data: excel data
+    """
+    excel_data_total = pd.read_excel(input_dir, sheet, header=None)
+    detail_data = excel_data_total.iloc[:3]
+    return detail_data
 
 
 def readExcelWithOpenpyxl(input_dir, sheet=0):
@@ -125,6 +139,7 @@ def createColumnData(total_row, data):
 
 def splitTableDataToMultiSheet(
         excel_data,
+        detail_data,
         filter_data,
         filter_title,
         output_dir,
@@ -133,19 +148,22 @@ def splitTableDataToMultiSheet(
     split table data
     Args:
         excel_data: excel_data
+        detail_data: detail_data
         filter_data: filter column
         filter_title: specify column filter
         output_dir: specify directory out put
     """
     MDVCNT = 2
     SUMDVCNT = "SUM ĐVCNT"
+    START_ROW = 3
     rows = len(excel_data.axes[0])
     total = len(filter_data)
     file_name = os.path.join(output_dir, f'{sheet}.xlsx')
     writer = pd.ExcelWriter(file_name)
     progresBar = tqdm(range(total), desc="Create Fille...")
     file = 0
-    excel_data.to_excel(writer, "Total", index=False)
+    detail_data.to_excel(writer, "Total", index=False, header=None)
+    excel_data.to_excel(writer, "Total", index=False, startrow=START_ROW)
     all_dvcnt_array = []
     total_dvcnt = 0
     for filter in filter_data:
@@ -165,7 +183,13 @@ def splitTableDataToMultiSheet(
         index = pd.Index(range(1, len(data_frame)+1))
         total_dvcnt += len(dvcnt_array)
         data_frame.index = index
-        data_frame.to_excel(writer, filter, index_label="STT")
+        detail_data.to_excel(writer, filter, index=False, header=None)
+        data_frame.to_excel(
+            writer,
+            filter,
+            index_label="STT",
+            startrow=START_ROW)
+
         file += 1
         progresBar.update()
 
@@ -227,6 +251,7 @@ def splitDataWithMode(input_dir, output_dir, filter, sheet, mode):
         mode: specify mode by user
     """
     excel_data = readExcelWithPandas(input_dir, sheet)
+    detail_data = getDetailSheet(input_dir, sheet)
     header = getListHeader(excel_data)
     filter_data = getListDataColumn(excel_data, header[filter])
     if (mode == 0):
@@ -238,6 +263,7 @@ def splitDataWithMode(input_dir, output_dir, filter, sheet, mode):
     elif (mode == 1):
         splitTableDataToMultiSheet(
             excel_data,
+            detail_data,
             filter_data,
             header[filter],
             output_dir,
@@ -259,6 +285,34 @@ def splitToMultiDataWithMode(mode):
     print("===========DONE===========")
 
 
+def createTableData(rows_data):
+    """
+    create new table data
+    Args:
+        rows_data: origin data
+    """
+    column_need = [9, 8, None, 3, None, 5, 7, 10, 0]
+    tmp_table = []
+    tmp_table_value = []
+    for i, row_data in enumerate(rows_data):
+        if i == 147:
+            for x in range(0, 13):
+                print(f'row data: {row_data[x].value}')
+        tmp_rơw = []
+        tmp_rơw_value = []
+        for j in column_need:
+            if j is not None:
+                tmp_rơw_value.append(row_data[j].value)
+                tmp_rơw.append(row_data[j])
+            else:
+                tmp_rơw_value.append(None)
+                tmp_rơw.append(None)
+        tmp_table.append(tmp_rơw)
+        tmp_table_value.append(tmp_rơw_value)
+    # print("XXXX->test: ", tmp_table_value)
+    return tmp_table
+
+
 def createFileWithOpenpyxl(rows_data, output_dir):
     """
     create file with openxlsx
@@ -266,21 +320,48 @@ def createFileWithOpenpyxl(rows_data, output_dir):
         output_dir: specify out put folder
         data: out put data
     """
+    column_need = [9, 8, None, 3, None, 5, 7, 10, 0]
     total = len(rows_data)
     print("Total: ", total)
     progresBar = tqdm(range(total), desc="Create Fille...")
     wb = openpyxl.Workbook()
     sheet = wb.active
-    for i, row_data in enumerate(rows_data):
-        for j in range(0, 13):
-            sheet.cell(i + 1, j + 1).value = row_data[j].value
-            progresBar.update()
+    # for i, row_data in enumerate(rows_data):
+    #     for j in range(0, 13):
+    #         sheet.cell(i + 1, j + 1).value = row_data[j].value
+    #     progresBar.update()
 
+    for i, row_data in enumerate(rows_data):
+        for j, column in enumerate(column_need):
+            sheet.cell(i + 8, 1).value = i + 1
+            if column is not None:
+                sheet.cell(i + 8, j + 2).value = row_data[column].value
+            else:
+                sheet.cell(i + 8, j + 2).value = None
+        progresBar.update()
     file_name = os.path.join(output_dir, "Test.xlsx")
     wb.save(file_name)
 
 
-def isRowNeed(row, min_clolumns, max_columns, row_number):
+def isRowEmpty(row, min_column, max_column, row_number):
+    """
+    check row is empty
+    Args:
+        row: row data
+        min_column: min column
+        max_column: max column
+    return:
+        isEmpty
+    """
+    for i in range(min_column, max_column):
+        cell = row[i]
+        value = cell.value
+        if value is not None:
+            return False
+    return True
+
+
+def isRowNeed(row, min_column, max_column, row_number):
     """
     check row is copy
     Args:
@@ -289,8 +370,12 @@ def isRowNeed(row, min_clolumns, max_columns, row_number):
     """
     BG_COLOR = 64
     FG_COLOR = "FFFFFF00"
+    is_empty = isRowEmpty(row, min_column, max_column, row_number)
+    if is_empty is True:
+        return False
+
     isRow = True
-    for i in range(min_clolumns, max_columns):
+    for i in range(min_column, max_column):
         cell = row[i]
         value = cell.value
         bg_color = cell.fill.bgColor.index
@@ -303,8 +388,8 @@ def isRowNeed(row, min_clolumns, max_columns, row_number):
             isRow = False
             break
 
-    if isRow:
-        for i in range(min_clolumns, max_columns):
+    if isRow is True:
+        for i in range(min_column, max_column):
             cell = row[i]
             if cell.value is not None:
                 bg_color = cell.fill.bgColor.index
