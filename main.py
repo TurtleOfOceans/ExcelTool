@@ -154,7 +154,9 @@ def splitTableDataToMultiSheet(
         output_dir: specify directory out put
     """
     MDVCNT = 2
-    SUMDVCNT = "SUM ĐVCNT"
+    SUMDVCNT_Hex = "53E1BB91206CC6B0E1BBA36E6720C49056434E54"
+    byte_string = bytes.fromhex(SUMDVCNT_Hex)
+    SUMDVCNT = byte_string.decode('utf-8')
     START_ROW = 3
     rows = len(excel_data.axes[0])
     total = len(filter_data)
@@ -309,7 +311,6 @@ def createTableData(rows_data):
                 tmp_rơw.append(None)
         tmp_table.append(tmp_rơw)
         tmp_table_value.append(tmp_rơw_value)
-    # print("XXXX->test: ", tmp_table_value)
     return tmp_table
 
 
@@ -326,10 +327,6 @@ def createFileWithOpenpyxl(rows_data, output_dir):
     progresBar = tqdm(range(total), desc="Create Fille...")
     wb = openpyxl.Workbook()
     sheet = wb.active
-    # for i, row_data in enumerate(rows_data):
-    #     for j in range(0, 13):
-    #         sheet.cell(i + 1, j + 1).value = row_data[j].value
-    #     progresBar.update()
 
     for i, row_data in enumerate(rows_data):
         for j, column in enumerate(column_need):
